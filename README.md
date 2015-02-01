@@ -6,9 +6,9 @@
 
 > This project will develop an application for lecturers that will take advantage of the unique RFID chips in student cards,  using them to monitor student attendance in an effort to reduce the time taken to validate attendance at the beginning of lectures.
 
-### API Server
+#### API Server
 
 The API Server developed in this repository is part of the final year project that I'm currently undertaking at the University of Portsmouth.
 
 #### Progress
-Project progress can be tracked at [my blog](http://www.richardsolomou.com/blog).
+Project progress can be tracked at [my blog](http://richardsolomou.com/blog/final-year-project/).
