@@ -1,0 +1,10 @@
+{
+	"name": "atmos-api-server",
+	"description": "ATMOS: NFC-Assisted Attendance Monitoring",
+	"version": "0.2.0",
+	"main": "server.js",
+	"dependencies": {
+		"restify": "*",
+		"mysql": "*"
+	}
+}
