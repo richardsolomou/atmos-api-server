@@ -2,7 +2,9 @@
 
 #### Description
 
-The API Server developed in this repository is part of the final year project that I'm currently undertaking at the University of Portsmouth. This application will serve as the backend API for responding to HTTP requests from the web application.
+The application developed in this repository is part of the final year project that I'm currently undertaking at the University of Portsmouth.
+
+This API Server will serve as the backend API for responding to HTTP requests from the web application.
 
 #### Progress
 The current progress of the project can be seen at [my blog](http://richardsolomou.com/blog/final-year-project/).
