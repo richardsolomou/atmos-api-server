@@ -5,5 +5,5 @@ module.exports = {
 		password: '',
 		database: ''
 	},
-	express: ''
+	port: process.env.PORT || 4000
 };

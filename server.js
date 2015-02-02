@@ -1,55 +1,128 @@
-/**
+/********************************
  * Module dependencies.
- */
+ *******************************/
 
 // Load global module dependencies.
-var restify = require('restify'),
-	mysql = require('mysql');
+var restify	=	require('restify'),
+	mysql	=	require('mysql'),
+	util	=	require('util');
 
-// Set the port and load the configuration.
-var port = process.env.PORT || 4000,
-	config = require('./config');
+// Load the configuration and set the API prefix.
+var config	=	require('./config'),
+	prefix	=	'/atmos/api/v2';
 
 
-/**
- * Module configuration.
- */
+/********************************
+ * Module cofiguration.
+ *******************************/
 
-// Initialize restify.
-var server = restify.createServer();
 // Setup connection to the MySQL database.
 var mysql_conn = mysql.createConnection(config.db);
-var path = '/atmos/api/v2';
 
+// Implement a custom format for query escaping.
+mysql_conn.config.queryFormat = function (query, values) {
+	if (!values) return query;
+	return query.replace(/\:(\w+)/g, function (txt, key) {
+		if (values.hasOwnProperty(key)) return this.escape(values[key]);
+		return txt;
+	}.bind(this));
+};
+
+// Initialize restify.
+var server = restify.createServer({
+	formatters: {
+		'application/json': function (req, res, body) {
+			if (body instanceof Error) {
+				var status = (body.status) ? body.status : 200;
+				delete body.status;
+				body = {
+					error: {
+						message: body.message,
+						status: status
+					}
+				};
+			} else {
+				var status = (body.status) ? body.status : 200;
+				delete body.status;
+				body = {
+					data: body,
+					status: status
+				};
+			}
+
+			body = JSON.stringify(body);
+			res.setHeader('Content-Length', Buffer.byteLength(body, 'utf8'));
+			return body;
+		}
+	}
+});
+
+
+/********************************
+ * Route cofiguration.
+ *******************************/
 
 /**
- * Route cofiguration.
+ * Retrieves the attendance log of a specific student from the database.
  */
+server.get(prefix + '/students/:student_id/attendance', function (req, res) {
+	mysql_conn.query('SELECT `attendance`.`event_id`, `attendance`.`recorded_at`, `events`.`session_id` FROM `attendance` INNER JOIN `events` ON `attendance`.`event_id` = `events`.`id` WHERE `attendance`.`student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		if (err) {
+			return res.send(err);
+		}
 
-server.get(path + '/students', function (req, res) {
-	// Run a MySQL query to get a specific user.
+		if (!results || !results.length) {
+			err = new Error('Invalid student ID.');
+			err.status = 404;
+			return res.send(err);
+		}
+
+		return res.send(results);
+	});
+});
+
+/**
+ * Retrieves a specific student from the database.
+ */
+server.get(prefix + '/students/:student_id', function (req, res) {
+	mysql_conn.query('SELECT * FROM `students` WHERE `id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		if (err) {
+			return res.send(err);
+		}
+
+		if (!results || !results.length) {
+			err = new Error('Invalid student ID.');
+			err.status = 404;
+			return res.send(err);
+		}
+
+		return res.send(results[0]);
+	});
+});
+
+/**
+ * Retrieves a list of students from the database.
+ */
+server.get(prefix + '/students', function (req, res) {
 	mysql_conn.query('SELECT * FROM `students`', function (err, results) {
-		// Return appropriate error messages if something went wrong.
-		if (err) return res.json(500, { error: { message: 'Something went wrong.', code: 500, details: err } });
-		if (!results || !results.length) return res.json(404, { error: { message: 'Invalid reference.', code: 404 } });
-		// Return the user in JSON format.
-		return res.json(results);
-	});
-});
+		if (err) {
+			return res.send(err);
+		}
 
-server.get(path + '/students/:reference', function (req, res) {
-	// Run a MySQL query to get a specific user.
-	mysql_conn.query('SELECT * FROM `students` WHERE `reference` = "' + req.params.reference + '"', function (err, results) {
-		// Return appropriate error messages if something went wrong.
-		if (err) return res.json(500, { error: { message: 'Something went wrong.', code: 500, details: err } });
-		if (!results || !results.length) return res.json(404, { error: { message: 'Invalid reference.', code: 404 } });
-		// Return the user in JSON format.
-		return res.json(results[0]);
+		if (!results || !results.length) {
+			err = new Error('Table is empty.');
+			err.status = 404;
+			return res.send(err);
+		}
+
+		return res.send(results);
 	});
 });
 
 
-// Listen for connections.
-server.listen(port, function () {
+/********************************
+ * Listens for connections.
+ *******************************/
+server.listen(config.port, function () {
 	console.log('%s listening at %s', server.name, server.url);
 });
