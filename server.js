@@ -33,7 +33,7 @@ var server = restify.createServer({
 	formatters: {
 		'application/json': function (req, res, body) {
 			if (body instanceof Error) {
-				var status = (body.status) ? body.status : 200;
+				var status = (body.status) ? body.status : 400;
 				delete body.status;
 				body = {
 					error: {
@@ -66,7 +66,7 @@ var server = restify.createServer({
  * Retrieves the attendance log of a specific student from the database.
  */
 server.get(prefix + '/students/:student_id/attendance', function (req, res) {
-	mysql_conn.query('SELECT `attendance`.`event_id`, `attendance`.`recorded_at`, `events`.`session_id` FROM `attendance` INNER JOIN `events` ON `attendance`.`event_id` = `events`.`id` WHERE `attendance`.`student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+	mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 		if (err) {
 			return res.send(err);
 		}
@@ -77,7 +77,13 @@ server.get(prefix + '/students/:student_id/attendance', function (req, res) {
 			return res.send(err);
 		}
 
-		return res.send(results);
+		mysql_conn.query('SELECT `session_id`, `attendance_recorded` FROM `attendance` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+			if (err) {
+				return res.send(err);
+			}
+
+			return res.send(results);
+		});
 	});
 });
 
@@ -85,7 +91,7 @@ server.get(prefix + '/students/:student_id/attendance', function (req, res) {
  * Retrieves a specific student from the database.
  */
 server.get(prefix + '/students/:student_id', function (req, res) {
-	mysql_conn.query('SELECT * FROM `students` WHERE `id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+	mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 		if (err) {
 			return res.send(err);
 		}
