@@ -61,8 +61,8 @@ var server = restify.createServer({
 /********************************
  * Route cofiguration.
  *******************************/
-require('./routes/lecturers')(server, mysql_conn, prefix);
-require('./routes/students')(server, mysql_conn, prefix);
+require('./routes/lecturers')(server, mysql_conn, prefix, restify);
+require('./routes/students')(server, mysql_conn, prefix, restify);
 
 
 /********************************
