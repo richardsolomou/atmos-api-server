@@ -58,6 +58,17 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	});
 
 	/**
+	 * Creates a new lecturer.
+	 */
+	server.post(prefix + '/lecturers', function (req, res, next) {
+		mysql_conn.query('INSERT INTO `lecturers` VALUES (:lecturer_id, :lecturer_name, :lecturer_email)', { lecturer_id: req.params.lecturer_id, lecturer_name: req.params.lecturer_name, lecturer_email: req.params.lecturer_email }, function (err, results) {
+			if (err) return next(err);
+
+			return res.send(results);
+		});
+	});
+
+	/**
 	 * Retrieves a specific lecturer from the database.
 	 */
 	server.get(prefix + '/lecturers/:lecturer_id', function (req, res, next) {
@@ -66,17 +77,6 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid lecturer ID.'));
 
 			return res.send(results[0]);
-		});
-	});
-
-	/**
-	 * Creates a new lecturer.
-	 */
-	server.post(prefix + '/lecturers', function (req, res, next) {
-		mysql_conn.query('INSERT INTO `lecturers` VALUES (:lecturer_id, :lecturer_name, :lecturer_email)', { lecturer_id: req.params.lecturer_id, lecturer_name: req.params.lecturer_name, lecturer_email: req.params.lecturer_email }, function (err, results) {
-			if (err) return next(err);
-
-			return res.send(results);
 		});
 	});
 
