@@ -69,13 +69,13 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 		});
 	});
 
-    /**
-     * Updates a specific lecturer.
-     */
-	server.put(prefix + '/lecturers/:lecturer_id', function (req, res, next) {
-		mysql_conn.query('UPDATE `lecturers` SET `lecturer_name` = :lecturer_name, `lecturer_email` = :lecturer_email WHERE `lecturer_id` = :lecturer_id', { lecturer_id: req.params.lecturer_id, lecturer_name: req.params.lecturer_name, lecturer_email: req.params.lecturer_email }, function (err, results) {
+	/**
+	 * Creates a new lecturer.
+	 */
+	server.post(prefix + '/lecturers', function (req, res, next) {
+		mysql_conn.query('INSERT INTO `lecturers` VALUES (:lecturer_id, :lecturer_name, :lecturer_email)', { lecturer_id: req.params.lecturer_id, lecturer_name: req.params.lecturer_name, lecturer_email: req.params.lecturer_email }, function (err, results) {
 			if (err) return next(err);
-			
+
 			return res.send(results);
 		});
 	});
@@ -85,6 +85,28 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 */
 	server.get(prefix + '/lecturers', function (req, res, next) {
 		mysql_conn.query('SELECT * FROM `lecturers`', function (err, results) {
+			if (err) return next(err);
+
+			return res.send(results);
+		});
+	});
+
+	/**
+	 * Updates a specific lecturer.
+	 */
+	server.put(prefix + '/lecturers/:lecturer_id', function (req, res, next) {
+		mysql_conn.query('UPDATE `lecturers` SET `lecturer_name` = :lecturer_name, `lecturer_email` = :lecturer_email WHERE `lecturer_id` = :lecturer_id', { lecturer_id: req.params.lecturer_id, lecturer_name: req.params.lecturer_name, lecturer_email: req.params.lecturer_email }, function (err, results) {
+			if (err) return next(err);
+			
+			return res.send(results);
+		});
+	});
+
+	/**
+	 * Deletes a specific lecturer.
+	 */
+	server.del(prefix + '/lecturers/:lecturer_id', function (req, res, next) {
+		mysql_conn.query('DELETE FROM `lecturers` WHERE `lecturer_id` = :lecturer_id', { lecturer_id: req.params.lecturer_id }, function (err, results) {
 			if (err) return next(err);
 
 			return res.send(results);
