@@ -5,6 +5,8 @@
 	"main": "server.js",
 	"dependencies": {
 		"restify": "*",
-		"mysql": "*"
+		"mysql": "*",
+		"async": "*",
+		"winston": "*"
 	}
 }

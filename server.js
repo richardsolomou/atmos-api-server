@@ -57,12 +57,17 @@ var server = restify.createServer({
 	}
 });
 
+// Use query parser.
+server.use(restify.queryParser());
+
 
 /********************************
  * Route cofiguration.
  *******************************/
 require('./routes/lecturers')(server, mysql_conn, prefix, restify);
 require('./routes/students')(server, mysql_conn, prefix, restify);
+require('./routes/sessions')(server, mysql_conn, prefix, restify);
+require('./routes/units')(server, mysql_conn, prefix, restify);
 
 
 /********************************
