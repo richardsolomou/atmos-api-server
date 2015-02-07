@@ -16,8 +16,30 @@ var config  =   require('./config'),
  * Module cofiguration.
  *******************************/
 
-// Setup connection to the MySQL database.
-var mysql_conn = mysql.createConnection(config.db);
+var mysql_conn;
+
+// Handles disconnects to the MySQL server.
+function handleDisconnect() {
+	mysql_conn = mysql.createConnection(config.db);
+
+	mysql_conn.connect(function (err) {
+		if (err) {
+			console.log('Error when connecting to database:', err);
+			setTimeout(handleDisconnect, 2000);
+		}
+	});
+
+	mysql_conn.on('error', function (err) {
+		console.log('Database error:', err);
+		if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+			handleDisconnect();
+		} else {
+			throw err;
+		}
+	});
+}
+
+handleDisconnect();
 
 // Implement a custom format for query escaping.
 mysql_conn.config.queryFormat = function (query, values) {
