@@ -38,7 +38,7 @@ module.exports = function (server, connection, prefix, restify) {
 			if (err) return next(err);
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid session ID.'));
 
-			connection.query('SELECT `sessions`.* FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`secondary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`primary_session_id` = :session_id UNION SELECT `sessions`.* FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`primary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`secondary_session_id` = :session_id', { session_id: req.params.session_id }, function (err, results) {
+			connection.query('SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`secondary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`primary_session_id` = :session_id UNION SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`primary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`secondary_session_id` = :session_id', { session_id: req.params.session_id }, function (err, results) {
 				if (err) return next(err);
 
 				if (req.query.populate && req.query.populate == 'unit_id') {
