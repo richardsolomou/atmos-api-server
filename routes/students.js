@@ -1,4 +1,4 @@
-module.exports = function (server, mysql_conn, prefix, restify) {
+module.exports = function (server, connection, prefix, restify) {
 	// Load module dependencies.
 	var async = require('async'),
 		winston = require('winston');
@@ -18,11 +18,11 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 * Retrieves the units of a specific student from the database.
 	 */
 	server.get(prefix + '/students/:student_id/units', function (req, res, next) {
-		mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		connection.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 			if (err) return next(err);
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid student ID.'));
 
-			mysql_conn.query('SELECT `units`.* FROM `studentsessions` INNER JOIN `sessions` ON `studentsessions`.`session_id` = `sessions`.`session_id` INNER JOIN `units` ON `units`.`unit_id` = `sessions`.`unit_id` WHERE `studentsessions`.`student_id` = :student_id GROUP BY `units`.`unit_id`', { student_id: req.params.student_id }, function (err, results) {
+			connection.query('SELECT `units`.* FROM `studentsessions` INNER JOIN `sessions` ON `studentsessions`.`session_id` = `sessions`.`session_id` INNER JOIN `units` ON `units`.`unit_id` = `sessions`.`unit_id` WHERE `studentsessions`.`student_id` = :student_id GROUP BY `units`.`unit_id`', { student_id: req.params.student_id }, function (err, results) {
 				if (err) return next(err);
 
 				return res.send(results);
@@ -34,16 +34,16 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 * Retrieves the sessions of a specific student from the database.
 	 */
 	server.get(prefix + '/students/:student_id/sessions', function (req, res, next) {
-		mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		connection.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 			if (err) return next(err);
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid student ID.'));
 
-			mysql_conn.query('SELECT `sessions`.* FROM `studentsessions` INNER JOIN `sessions` ON `studentsessions`.`session_id` = `sessions`.`session_id` WHERE `studentsessions`.`student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+			connection.query('SELECT `sessions`.* FROM `studentsessions` INNER JOIN `sessions` ON `studentsessions`.`session_id` = `sessions`.`session_id` WHERE `studentsessions`.`student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 				if (err) return next(err);
 
 				if (req.query.populate && req.query.populate == 'unit_id') {
 					async.each(results, function (session, callback) {
-						mysql_conn.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
+						connection.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
 							session.unit_id = units[0];
 							callback();
 						});
@@ -58,19 +58,41 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	});
 
 	/**
+	 * Retrieves the attendance log of all students from the database.
+	 */
+	server.get(prefix + '/attendance', function (req, res, next) {
+		connection.query('SELECT * FROM `attendance`', function (err, results) {
+			if (err) return next(err);
+
+			if (req.query.populate && req.query.populate == 'session_id') {
+				async.each(results, function (attendance, callback) {
+					connection.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: attendance.session_id }, function (err, sessions) {
+						attendance.session_id = sessions[0];
+						callback();
+					});
+				}, function () {
+					return res.send(results);
+				});
+			} else {
+				return res.send(results);
+			}
+		});
+	});
+
+	/**
 	 * Retrieves the attendance log of a specific student from the database.
 	 */
 	server.get(prefix + '/students/:student_id/attendance', function (req, res, next) {
-		mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		connection.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 			if (err) return next(err);
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid student ID.'));
 
-			mysql_conn.query('SELECT `session_id`, `attendance_recorded` FROM `attendance` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
-				if (err) return res.send(err);
+			connection.query('SELECT `session_id`, `attendance_recorded` FROM `attendance` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+				if (err) return next(err);
 
 				if (req.query.populate && req.query.populate == 'session_id') {
 					async.each(results, function (attendance, callback) {
-						mysql_conn.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: attendance.session_id }, function (err, sessions) {
+						connection.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: attendance.session_id }, function (err, sessions) {
 							attendance.session_id = sessions[0];
 							callback();
 						});
@@ -85,10 +107,10 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	});
 
 	/**
-	 * Creates a new student.
+	 * Creates a new attendance record.
 	 */
-	server.post(prefix + '/students', function (req, res, next) {
-		mysql_conn.query('INSERT INTO `students` VALUES (:student_id, :student_name, :student_card)', { student_id: req.params.student_id, student_name: req.params.student_name, student_card: req.params.student_card }, function (err, results) {
+	server.post(prefix + '/attendance', function (req, res, next) {
+		connection.query('INSERT INTO `attendance` (`student_id`, `session_id`, `attendance_recorded`) VALUES (:student_id, :session_id, :attendance_recorded)', { student_id: req.params.student_id, session_id: req.params.session_id, attendance_recorded: req.params.attendance_recorded }, function (err, results) {
 			if (err) return next(err);
 
 			return res.send(results);
@@ -96,10 +118,33 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	});
 
 	/**
+	 * Creates a new student.
+	 */
+	server.post(prefix + '/students', function (req, res, next) {
+		connection.query('INSERT INTO `students` VALUES (:student_id, :student_name, :student_card)', { student_id: req.params.student_id, student_name: req.params.student_name, student_card: req.params.student_card }, function (err, results) {
+			if (err) return next(err);
+
+			return res.send(results);
+		});
+	});
+
+	/**
+	 * Retrieves a specific student from the database based on their student card entry.
+	 */
+	server.get(prefix + '/students/student_card/:student_card', function (req, res, next) {
+		connection.query('SELECT * FROM `students` WHERE `student_card` = :student_card', { student_card: req.params.student_card }, function (err, results) {
+			if (err) return next(err);
+			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid student card.'));
+
+			return res.send(results[0]);
+		});
+	});
+
+	/**
 	 * Retrieves a specific student from the database.
 	 */
 	server.get(prefix + '/students/:student_id', function (req, res, next) {
-		mysql_conn.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		connection.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 			if (err) return next(err);
 			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid student ID.'));
 
@@ -111,7 +156,7 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 * Retrieves a list of students from the database.
 	 */
 	server.get(prefix + '/students', function (req, res, next) {
-		mysql_conn.query('SELECT * FROM `students`', function (err, results) {
+		connection.query('SELECT * FROM `students`', function (err, results) {
 			if (err) return next(err);
 
 			return res.send(results);
@@ -122,7 +167,7 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 * Updates a specific student.
 	 */
 	server.put(prefix + '/students/:student_id', function (req, res, next) {
-		mysql_conn.query('UPDATE `students` SET `student_name` = :student_name, `student_card` = :student_card WHERE `student_id` = :student_id', { student_id: req.params.student_id, student_name: req.params.student_name, student_card: req.params.student_card }, function (err, results) {
+		connection.query('UPDATE `students` SET `student_name` = :student_name, `student_card` = :student_card WHERE `student_id` = :student_id', { student_id: req.params.student_id, student_name: req.params.student_name, student_card: req.params.student_card }, function (err, results) {
 			if (err) return next(err);
 			
 			return res.send(results);
@@ -133,7 +178,7 @@ module.exports = function (server, mysql_conn, prefix, restify) {
 	 * Deletes a specific student.
 	 */
 	server.del(prefix + '/students/:student_id', function (req, res, next) {
-		mysql_conn.query('DELETE FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
+		connection.query('DELETE FROM `students` WHERE `student_id` = :student_id', { student_id: req.params.student_id }, function (err, results) {
 			if (err) return next(err);
 
 			return res.send(results);

@@ -16,33 +16,15 @@ var config  =   require('./config'),
  * Module cofiguration.
  *******************************/
 
-var mysql_conn;
+var connection = mysql.createConnection(config.db);
 
 // Handles disconnects to the MySQL server.
-function handleDisconnect() {
-	mysql_conn = mysql.createConnection(config.db);
-
-	mysql_conn.connect(function (err) {
-		if (err) {
-			console.log('Error when connecting to database:', err);
-			setTimeout(handleDisconnect, 2000);
-		}
-	});
-
-	mysql_conn.on('error', function (err) {
-		console.log('Database error:', err);
-		if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-			handleDisconnect();
-		} else {
-			throw err;
-		}
-	});
-}
-
-handleDisconnect();
+setInterval(function () {
+	connection.query('SELECT 1');
+}, 60000);
 
 // Implement a custom format for query escaping.
-mysql_conn.config.queryFormat = function (query, values) {
+connection.config.queryFormat = function (query, values) {
 	if (!values) return query;
 	return query.replace(/\:(\w+)/g, function (txt, key) {
 		if (values.hasOwnProperty(key)) return this.escape(values[key]);
@@ -86,10 +68,10 @@ server.use(restify.queryParser());
 /********************************
  * Route cofiguration.
  *******************************/
-require('./routes/lecturers')(server, mysql_conn, prefix, restify);
-require('./routes/students')(server, mysql_conn, prefix, restify);
-require('./routes/sessions')(server, mysql_conn, prefix, restify);
-require('./routes/units')(server, mysql_conn, prefix, restify);
+require('./routes/lecturers')(server, connection, prefix, restify);
+require('./routes/students')(server, connection, prefix, restify);
+require('./routes/sessions')(server, connection, prefix, restify);
+require('./routes/units')(server, connection, prefix, restify);
 
 
 /********************************
