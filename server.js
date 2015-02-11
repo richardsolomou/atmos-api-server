@@ -11,6 +11,9 @@ var restify =   require('restify'),
 var config  =   require('./config'),
 	prefix  =   '/atmos/api/v2';
 
+// Set the default timezone.
+process.env.TZ = 'Europe/London';
+
 
 /********************************
  * Module cofiguration.
@@ -68,9 +71,10 @@ server.use(restify.queryParser());
 /********************************
  * Route cofiguration.
  *******************************/
+require('./routes/attendance')(server, connection, prefix, restify);
 require('./routes/lecturers')(server, connection, prefix, restify);
-require('./routes/students')(server, connection, prefix, restify);
 require('./routes/sessions')(server, connection, prefix, restify);
+require('./routes/students')(server, connection, prefix, restify);
 require('./routes/units')(server, connection, prefix, restify);
 
 
