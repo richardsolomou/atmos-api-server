@@ -10,11 +10,14 @@ module.exports = function (server, connection, prefix, restify) {
 		connection.query('SELECT * FROM `attendance`', function (err, results) {
 			if (err) return next(err);
 
-			if (req.query.populate && req.query.populate == 'session_id') {
+			if (req.query.populate && req.query.populate == 'student_id,session_id') {
 				async.each(results, function (attendance, callback) {
-					connection.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: attendance.session_id }, function (err, sessions) {
-						attendance.session_id = sessions[0];
-						callback();
+					connection.query('SELECT * FROM `students` WHERE `student_id` = :student_id', { student_id: attendance.student_id }, function (err, students) {
+						attendance.student_id = students[0];
+						connection.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: attendance.session_id }, function (err, sessions) {
+							attendance.session_id = sessions[0];
+							callback();
+						});
 					});
 				}, function () {
 					return res.send(results);
