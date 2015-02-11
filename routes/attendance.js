@@ -1,21 +1,10 @@
 module.exports = function (server, connection, prefix, restify) {
 	// Load module dependencies.
-	var async = require('async'),
-		winston = require('winston');
-
-	// Setup logging module.
-	var logger = new winston.Logger({
-		transports: [
-			new winston.transports.File({ filename: require('path').dirname(require.main.filename) + '/logs/debug.log' })
-		],
-		exceptionHandlers: [
-			new winston.transports.File({ filename: require('path').dirname(require.main.filename) + '/logs/exceptions.log' })
-		],
-		exitOnError: false
-	});
+	var async = require('async');
 
 	/**
-	 * Retrieves the attendance log of all students from the database.
+	 * Gets the attendance log.
+	 * GET /attendance
 	 */
 	server.get(prefix + '/attendance', function (req, res, next) {
 		connection.query('SELECT * FROM `attendance`', function (err, results) {
@@ -37,7 +26,8 @@ module.exports = function (server, connection, prefix, restify) {
 	});
 
 	/**
-	 * Creates a new attendance record.
+	 * Creates an attendance record.
+	 * POST /attendance
 	 */
 	server.post(prefix + '/attendance', function (req, res, next) {
 		connection.query('INSERT INTO `attendance` (`student_id`, `session_id`, `attendance_recorded`) VALUES (:student_id, :session_id, :attendance_recorded)', { student_id: req.params.student_id, session_id: req.params.session_id, attendance_recorded: req.params.attendance_recorded }, function (err, results) {
