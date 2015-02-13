@@ -31,26 +31,21 @@ module.exports = function (server, connection, prefix, restify) {
 	 * GET /sessions/{{ SESSION_ID }}/alternatives
 	 */
 	server.get(prefix + '/sessions/:session_id/alternatives', function (req, res, next) {
-		connection.query('SELECT * FROM `sessions` WHERE `session_id` = :session_id', { session_id: req.params.session_id }, function (err, results) {
+		connection.query('SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`secondary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`primary_session_id` = :session_id UNION SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`primary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`secondary_session_id` = :session_id', { session_id: req.params.session_id }, function (err, results) {
 			if (err) return next(err);
-			if (!results || !results.length) return next(new restify.errors.NotFoundError('Invalid session ID.'));
 
-			connection.query('SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`secondary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`primary_session_id` = :session_id UNION SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`primary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`secondary_session_id` = :session_id', { session_id: req.params.session_id }, function (err, results) {
-				if (err) return next(err);
-
-				if (req.query.populate && req.query.populate == 'unit_id') {
-					async.each(results, function (session, callback) {
-						connection.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
-							session.unit_id = units[0];
-							callback();
-						});
-					}, function () {
-						return res.send(results);
+			if (req.query.populate && req.query.populate == 'unit_id') {
+				async.each(results, function (session, callback) {
+					connection.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
+						session.unit_id = units[0];
+						callback();
 					});
-				} else {
+				}, function () {
 					return res.send(results);
-				}
-			});
+				});
+			} else {
+				return res.send(results);
+			}
 		});
 	});
 
@@ -59,33 +54,21 @@ module.exports = function (server, connection, prefix, restify) {
 	 * GET /sessions/{{ SESSION_ID }}/alternatives/available
 	 */
 	server.get(prefix + '/sessions/:session_id/alternatives/available', function (req, res, next) {
-		connection.query('SELECT `available`.* FROM `sessions` AS `session` INNER JOIN `sessions` AS `available` ON `available`.`unit_id` = `session`.`unit_id` WHERE `session`.`session_id` = :session_id AND `available`.`session_id` != :session_id AND DATE_SUB(DATE(`available`.`session_from`), INTERVAL +1 WEEK) <= DATE(`session`.`session_from`) AND DATE_SUB(DATE(`available`.`session_from`), INTERVAL -1 WEEK) >= DATE(`session`.`session_from`)', { session_id: req.params.session_id }, function (err, results) {
+		connection.query('SELECT `available`.* FROM `sessions` AS `session` INNER JOIN `sessions` AS `available` ON `available`.`unit_id` = `session`.`unit_id` WHERE `session`.`session_id` = :session_id AND `available`.`session_id` != :session_id AND DATE_SUB(DATE(`available`.`session_from`), INTERVAL +6 DAY) <= DATE(`session`.`session_from`) AND DATE_SUB(DATE(`available`.`session_from`), INTERVAL -6 DAY) >= DATE(`session`.`session_from`)', { session_id: req.params.session_id }, function (err, results) {
 			if (err) return next(err);
 
-			connection.query('SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`secondary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`primary_session_id` = :session_id UNION SELECT `sessions`.*, `alternativesessions`.`alternativesession_id` FROM `alternativesessions` INNER JOIN `sessions` ON `alternativesessions`.`primary_session_id` = `sessions`.`session_id` WHERE `alternativesessions`.`secondary_session_id` = :session_id', { session_id: req.params.session_id }, function (err, alternatives) {
-				if (err) return next(err);
-
-				for (var i = 0; i < results.length; i++) {
-					for (var j = 0; j < alternatives.length; j++) {
-						if (results[i].session_id == alternatives[j].session_id) {
-							results.splice(i, 1);
-						}
-					}
-				}
-
-				if (req.query.populate && req.query.populate == 'unit_id') {
-					async.each(results, function (session, callback) {
-						connection.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
-							session.unit_id = units[0];
-							callback();
-						});
-					}, function () {
-						return res.send(results);
+			if (req.query.populate && req.query.populate == 'unit_id') {
+				async.each(results, function (session, callback) {
+					connection.query('SELECT * FROM `units` WHERE `unit_id` = :unit_id', { unit_id: session.unit_id }, function (err, units) {
+						session.unit_id = units[0];
+						callback();
 					});
-				} else {
+				}, function () {
 					return res.send(results);
-				}
-			});
+				});
+			} else {
+				return res.send(results);
+			}
 		});
 	});	
 
